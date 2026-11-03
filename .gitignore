@@ -1,0 +1,10 @@
+# Lingua Franca generated sources, CMake projects, and build output.
+/src-gen/
+
+# Compiled firmware and other generated binaries.
+/bin/
+
+# Generated firmware and other generated binaries.
+/include/
+
+.vscode/

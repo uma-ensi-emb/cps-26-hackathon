@@ -1,0 +1,39 @@
+target C
+
+/**
+ * Given x, y, and z accelerometer readings in g's,
+ * output the angles in the x and y directions (pitch and roll, respectively).
+ * The outputs are approximately in degrees in the range of -90.0 to 90.0.
+ *
+ * The algorithm used here is explained in the following app note:
+ * https://www.nxp.com/files-static/sensors/doc/app_note/AN3461.pdf
+ *
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+reactor Tilt {
+  preamble {=
+      #define PI           3.14159265358979323846
+  =}
+  input x:float;
+  input y:float;
+  input z:float;
+
+  output pitch:float;
+  output roll:float;
+
+  reaction(x, y, z) -> pitch, roll {=
+    float ax, ay, az;
+    // Extract values if all inputs are present.
+    if (x->is_present && y->is_present && z->is_present) {
+      ax = x->value;
+      ay = y->value;
+      az = z->value;
+      // Calculate tilt angles in radians.
+      float xtilt = atanf(-ax/sqrt(ay*ay + az*az));
+      float ytilt = atanf(-ay/sqrt(ax*ax + az*az));
+      lf_set(pitch, - 180 * xtilt / PI);
+      lf_set(roll, 180 * ytilt / PI);
+    }
+  =}
+}

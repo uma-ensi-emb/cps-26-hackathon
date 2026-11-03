@@ -1,0 +1,51 @@
+/**
+ * Reactor that outputs an event when button A is pressed on the Pololu robot.
+ * The debounce_time parameter specifies the minimum interval between button presses
+ * so that the button presses are considered distinct events.
+ * This is based on the solution to the Interrupt lab.
+ */
+ target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  single-threaded: true,
+  keepalive: true
+}
+
+preamble {=
+  #include <hardware/gpio.h>
+=}
+
+reactor Button(debounce_time: time = 100 ms) {
+  preamble {=
+    static void* action = NULL;
+    // Callback function has to have signature as follows (from gpio.h):
+    //    typedef void (*gpio_irq_callback_t)(uint gpio, uint32_t event_mask);
+    void my_callback(uint gpio, uint32_t event_mask) {
+      // printf("Callback invoked for gpio %#010x and event_mask %#010x\n", gpio, event_mask);
+      lf_schedule(action, 0);
+    }
+  =}
+
+  output press: bool
+  physical action a
+  state last_button_time:time = 0
+
+  reaction(startup) -> a {=
+    if (action != NULL) {
+      lf_print_error_and_exit("Only one instance of the Button reactor is allowed.");
+    }
+    action = (void*)a;
+    gpio_set_irq_enabled_with_callback(PICO_DEFAULT_LED_PIN, GPIO_IRQ_EDGE_FALL, true, &my_callback);
+  =}
+
+  reaction(a) -> press {=
+    instant_t now = lf_time_logical();
+    if (now - self->last_button_time >= self->debounce_time) {
+      lf_set(press, true);
+    }
+    // printf("Action triggered %lld ms after previous push\n", (now - self->last_button_time)/MSEC(1));
+    self->last_button_time = now;
+  =}
+}
